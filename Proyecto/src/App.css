@@ -1,42 +1,431 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #020617; /* slate-950 */
+  color: #e5e7eb;
+}
+
+/* Barra superior */
+.topbar {
+  background: radial-gradient(circle at top left, #020617, #020617);
+  border-bottom: 1px solid #1f2937;
+  color: #e5e7eb;
+  padding: 0.9rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.topbar h1 {
+  font-size: 1.25rem;
+}
+
+/* Botón SALIR */
+.btn-exit-top {
+  padding: 0.45rem 1.1rem;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  background: linear-gradient(135deg, #b91c1c, #ef4444);
+  color: #f9fafb;
+  text-transform: uppercase;
+  box-shadow: 0 10px 25px rgba(248, 113, 113, 0.4);
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    filter 0.15s ease;
+}
+
+.btn-exit-top:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.08);
+  box-shadow: 0 16px 34px rgba(248, 113, 113, 0.55);
+}
+
+/* Área principal */
+.main {
+  flex: 1;
+  padding: 1.5rem 2rem;
+}
+
+/* --- Login --- */
+
+.login-main {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-card {
+  background: radial-gradient(circle at top left, #020617, #020617);
+  border-radius: 1.5rem;
   padding: 2rem;
+  border: 1px solid #1f2937;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.7);
+  max-width: 360px;
+  width: 100%;
+  animation: float-in 0.45s ease-out;
+}
+
+.login-card h2 {
+  font-size: 1.3rem;
+  margin-bottom: 0.4rem;
+}
+
+.login-subtitle {
+  font-size: 0.88rem;
+  color: #9ca3af;
+  margin-bottom: 1.2rem;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.login-btn {
+  margin-top: 0.5rem;
+  width: 100%;
+}
+
+/* --- Página de consultas --- */
+
+.consulta-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Tira de burbujas con scroll horizontal */
+.consulta-strip {
+  display: flex;
+  gap: 0.9rem;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+  scroll-snap-type: x mandatory;
+}
+
+.consulta-strip::-webkit-scrollbar {
+  height: 10px; /* más grande */
+}
+
+.consulta-strip::-webkit-scrollbar-track {
+  background: #020617;
+}
+
+.consulta-strip::-webkit-scrollbar-thumb {
+  background: #4b5563;
+  border-radius: 999px;
+}
+
+/* Burbujas más grandes */
+.consulta-bubble {
+  scroll-snap-align: start;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.8rem 1.3rem;
+  border-radius: 999px;
+  border: 1px solid #1f2937;
+  cursor: pointer;
+  background: radial-gradient(circle at top left, #0b1120, #020617);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.7);
+  font-size: 0.94rem;
+  color: #e5e7eb;
+  transition:
+    transform 0.16s ease,
+    box-shadow 0.16s ease,
+    background 0.18s ease,
+    color 0.18s ease,
+    border-color 0.18s ease;
+}
+
+.consulta-bubble:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.9);
+  border-color: #334155;
+}
+
+.consulta-bubble.active {
+  background: linear-gradient(135deg, #2563eb, #4f46e5);
+  color: #f9fafb;
+  border-color: transparent;
+}
+
+.consulta-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  background-color: rgba(15, 23, 42, 0.95);
+  color: #f9fafb;
+}
+
+.consulta-title {
+  white-space: nowrap;
+}
+
+/* Panel de consulta (ocupa la pantalla disponible) */
+.consulta-panel {
+  margin-top: 0.4rem;
+  background: radial-gradient(circle at top left, #020617, #020617);
+  border-radius: 1.2rem;
+  padding: 1.3rem 1.6rem;
+  border: 1px solid #1f2937;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.9);
+  min-height: 260px;
+}
+
+.consulta-panel h2 {
+  font-size: 1.2rem;
+  margin-bottom: 0.4rem;
+}
+
+.descripcion {
+  font-size: 0.9rem;
+  color: #9ca3af;
+  margin-bottom: 1rem;
+}
+
+/* Formulario general */
+.form {
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.form-group label {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.form-group input {
+  padding: 0.45rem 0.6rem;
+  border-radius: 0.45rem;
+  border: 1px solid #374151;
+  font-size: 0.9rem;
+  background-color: #020617;
+  color: #e5e7eb;
+}
+
+.form-group input::placeholder {
+  color: #6b7280;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.5);
+}
+
+/* Botón principal */
+.btn-primary {
+  align-self: flex-start;
+  padding: 0.5rem 1.1rem;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  background: linear-gradient(135deg, #2563eb, #4f46e5);
+  color: #f9fafb;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    filter 0.15s ease;
+  box-shadow: 0 12px 30px rgba(37, 99, 235, 0.6);
+}
+
+.btn-primary:hover:enabled {
+  transform: translateY(-1px);
+  filter: brightness(1.08);
+  box-shadow: 0 18px 40px rgba(37, 99, 235, 0.8);
+}
+
+.btn-primary:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+/* Mensajes */
+.error {
+  margin-top: 0.5rem;
+  color: #fecaca;
+  font-size: 0.9rem;
+}
+
+.placeholder {
+  color: #9ca3af;
+  font-size: 0.95rem;
+}
+
+/* Resultado */
+.resultado {
+  margin-top: 1rem;
+}
+
+.resultado h3 {
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.tabla-contenedor {
+  max-height: 320px;
+  overflow: auto;
+  border-radius: 0.75rem;
+  border: 1px solid #1f2937;
+}
+
+.tabla-contenedor::-webkit-scrollbar {
+  width: 10px; /* más grande */
+}
+
+.tabla-contenedor::-webkit-scrollbar-thumb {
+  background: #4b5563;
+  border-radius: 999px;
+}
+
+.tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  color: #e5e7eb;
+}
+
+.tabla thead {
+  background-color: #020617;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.tabla th,
+.tabla td {
+  padding: 0.45rem 0.55rem;
+  border-bottom: 1px solid #1f2937;
+  text-align: left;
+}
+
+.tabla tbody tr:nth-child(even) {
+  background-color: #020617;
+}
+
+.tabla tbody tr:nth-child(odd) {
+  background-color: #020617;
+}
+
+/* Paginación */
+.paginacion {
+  margin-top: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.85rem;
+  flex-wrap: wrap;
+  color: #9ca3af;
+}
+
+.paginacion button {
+  padding: 0.3rem 0.8rem;
+  border-radius: 999px;
+  border: 1px solid #374151;
+  background-color: #020617;
+  cursor: pointer;
+  color: #e5e7eb;
+}
+
+.paginacion button:hover:enabled {
+  background-color: #111827;
+}
+
+.paginacion button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Exit message */
+.exit-message {
+  background: radial-gradient(circle at top left, #020617, #020617);
+  border-radius: 1.2rem;
+  padding: 1.5rem 1.7rem;
+  border: 1px solid #1f2937;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.9);
+  max-width: 520px;
+}
+
+/* Footer */
+.footer {
+  padding: 0.8rem 2rem;
+  font-size: 0.8rem;
+  color: #9ca3af;
   text-align: center;
+  border-top: 1px solid #1f2937;
+  background-color: #020617;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
-}
-
-@keyframes logo-spin {
+/* Animaciones */
+@keyframes float-in {
   from {
-    transform: rotate(0deg);
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
   }
   to {
-    transform: rotate(360deg);
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
-.card {
-  padding: 2em;
+.fade-in {
+  animation: fade-up 0.25s ease-out;
 }
 
-.read-the-docs {
-  color: #888;
+.slide-up {
+  animation: fade-up 0.3s ease-out;
+}
+
+/* Responsivo básico */
+@media (max-width: 768px) {
+  .main {
+    padding: 1rem;
+  }
+
+  .topbar {
+    padding: 0.8rem 1.1rem;
+  }
+
+  .consulta-panel {
+    padding: 1rem 1.1rem;
+  }
+
+  .consulta-strip {
+    gap: 0.7rem;
+  }
 }
