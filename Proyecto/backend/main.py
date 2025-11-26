@@ -17,7 +17,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Permitir todos los orígenes
     allow_credentials=True,
-    allow_methods=["GET"],  # Solo lectura
+    allow_methods=["*"],  # Permitir todos los métodos incluyendo OPTIONS
     allow_headers=["*"],
 )
 
@@ -32,6 +32,15 @@ async def shutdown_db_client():
 
 # Incluir router de consultas
 app.include_router(queries.router, prefix="/api", tags=["Consultas Universidad"])
+
+
+# Endpoint de prueba para verificar conexión
+@app.get("/api/test")
+async def test_connection():
+    from database import get_students
+    students = get_students()
+    count = await students.count_documents({})
+    return {"status": "ok", "students_count": count}
 
 # Ruta raíz
 @app.get("/")

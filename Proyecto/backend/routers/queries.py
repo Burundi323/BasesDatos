@@ -1,5 +1,8 @@
 # Router para las 10 consultas de la Universidad
-from fastapi import APIRouter, HTTPException, Query
+# Compatible con el frontend existente
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
+from typing import Optional
 from database import (
     get_students, get_courses, get_instructors, get_sections,
     get_takes, get_teaches, get_advisors, get_prereqs, 
@@ -8,22 +11,36 @@ from database import (
 
 router = APIRouter()
 
-def serialize_doc(doc) -> dict:
-    """Convertir documento MongoDB a dict serializable"""
-    if doc:
-        doc["_id"] = str(doc["_id"])
-    return doc
+# Modelo para recibir parámetros del frontend
+class ConsultaParams(BaseModel):
+    courseId: Optional[str] = None
+    studentId: Optional[str] = None
+    sectionId: Optional[str] = None
+    building: Optional[str] = None
+    studentName: Optional[str] = None
+    courseName: Optional[str] = None
+    professorName: Optional[str] = None
+    departmentName: Optional[str] = None
+
+
+def format_response(columns: list, rows: list) -> dict:
+    """Formatear respuesta como espera el frontend"""
+    return {
+        "columns": columns,
+        "rows": rows
+    }
 
 
 # ============================================
 # CONSULTA 1: Prerrequisitos de un curso
 # ============================================
-@router.get("/consulta1/prereqs/{course_id}")
-async def get_course_prerequisites(course_id: str):
-    """
-    Encontrar los prerrequisitos de un curso.
-    Si el curso no existe, envía mensaje de error.
-    """
+@router.post("/consulta/1")
+async def consulta_1(params: ConsultaParams):
+    """Encontrar los prerrequisitos de un curso."""
+    course_id = params.courseId
+    if not course_id:
+        raise HTTPException(status_code=400, detail="Falta el ID del curso")
+    
     courses = get_courses()
     prereqs = get_prereqs()
     
@@ -36,33 +53,39 @@ async def get_course_prerequisites(course_id: str):
     prereq_list = await prereqs.find({"course_id": course_id}).to_list(100)
     
     if not prereq_list:
-        return {
-            "curso": serialize_doc(course),
-            "mensaje": "Este curso no tiene prerrequisitos",
-            "prerrequisitos": []
-        }
+        return format_response(
+            columns=["Mensaje"],
+            rows=[["Este curso no tiene prerrequisitos"]]
+        )
     
     # Obtener detalles de cada prerrequisito
-    prereq_details = []
+    rows = []
     for p in prereq_list:
         prereq_course = await courses.find_one({"course_id": p["prereq_id"]})
         if prereq_course:
-            prereq_details.append(serialize_doc(prereq_course))
+            rows.append([
+                prereq_course["course_id"],
+                prereq_course["title"],
+                prereq_course["dept_name"],
+                str(prereq_course["credits"])
+            ])
     
-    return {
-        "curso": serialize_doc(course),
-        "prerrequisitos": prereq_details
-    }
+    return format_response(
+        columns=["ID Prerrequisito", "Título", "Departamento", "Créditos"],
+        rows=rows
+    )
 
 
 # ============================================
 # CONSULTA 2: Historial académico de estudiante
 # ============================================
-@router.get("/consulta2/transcript/{student_id}")
-async def get_student_transcript(student_id: str):
-    """
-    Obtener el historial académico completo (transcript) de un estudiante.
-    """
+@router.post("/consulta/2")
+async def consulta_2(params: ConsultaParams):
+    """Obtener el historial académico completo de un estudiante."""
+    student_id = params.studentId
+    if not student_id:
+        raise HTTPException(status_code=400, detail="Falta el ID del estudiante")
+    
     students = get_students()
     takes_col = get_takes()
     courses = get_courses()
@@ -75,91 +98,91 @@ async def get_student_transcript(student_id: str):
     # Obtener todas las materias cursadas
     takes_list = await takes_col.find({"ID": student_id}).to_list(1000)
     
-    # Obtener detalles de cada curso
-    transcript = []
+    if not takes_list:
+        return format_response(
+            columns=["Mensaje"],
+            rows=[[f"El estudiante {student['name']} no tiene cursos registrados"]]
+        )
+    
+    rows = []
     for t in takes_list:
         course = await courses.find_one({"course_id": t["course_id"]})
-        transcript.append({
-            "course_id": t["course_id"],
-            "title": course["title"] if course else "N/A",
-            "credits": course["credits"] if course else 0,
-            "semester": t["semester"],
-            "year": t["year"],
-            "grade": t["grade"],
-            "sec_id": t["sec_id"]
-        })
+        rows.append([
+            t["course_id"],
+            course["title"] if course else "N/A",
+            str(course["credits"]) if course else "0",
+            t["semester"],
+            str(t["year"]),
+            t["grade"] if t["grade"] else "N/A"
+        ])
     
     # Ordenar por año y semestre
-    transcript.sort(key=lambda x: (x["year"], x["semester"]))
+    rows.sort(key=lambda x: (x[4], x[3]))
     
-    return {
-        "estudiante": serialize_doc(student),
-        "historial": transcript,
-        "total_cursos": len(transcript)
-    }
+    return format_response(
+        columns=["ID Curso", "Título", "Créditos", "Semestre", "Año", "Calificación"],
+        rows=rows
+    )
 
 
 # ============================================
-# CONSULTA 3: Detalles de una sección (horario y aula)
+# CONSULTA 3: Detalles de una sección
 # ============================================
-@router.get("/consulta3/section/{course_id}/{sec_id}/{semester}/{year}")
-async def get_section_details(course_id: str, sec_id: str, semester: str, year: int):
-    """
-    Encontrar los detalles (horario y aula) de una sección específica.
-    """
+@router.post("/consulta/3")
+async def consulta_3(params: ConsultaParams):
+    """Encontrar los detalles (horario y aula) de una sección específica."""
+    sec_id = params.sectionId
+    if not sec_id:
+        raise HTTPException(status_code=400, detail="Falta el ID de la sección")
+    
     sections = get_sections()
     time_slots = get_time_slots()
-    classrooms = get_classrooms()
     courses = get_courses()
     
-    # Buscar la sección
-    section = await sections.find_one({
-        "course_id": course_id,
-        "sec_id": sec_id,
-        "semester": semester,
-        "year": year
-    })
+    # Buscar secciones con ese sec_id
+    section_list = await sections.find({"sec_id": sec_id}).to_list(100)
     
-    if not section:
-        raise HTTPException(status_code=404, detail="Sección no encontrada")
+    if not section_list:
+        raise HTTPException(status_code=404, detail=f"No se encontró la sección '{sec_id}'")
     
-    # Obtener información del curso
-    course = await courses.find_one({"course_id": course_id})
+    rows = []
+    for section in section_list:
+        course = await courses.find_one({"course_id": section["course_id"]})
+        time_slot_list = await time_slots.find({"time_slot_id": section["time_slot_id"]}).to_list(10)
+        
+        # Formatear horario
+        horario = ", ".join([
+            f"{ts['day']} {ts['start_hr']}:{ts['start_min']:02d}-{ts['end_hr']}:{ts['end_min']:02d}"
+            for ts in time_slot_list
+        ]) if time_slot_list else "N/A"
+        
+        rows.append([
+            section["course_id"],
+            course["title"] if course else "N/A",
+            section["sec_id"],
+            section["semester"],
+            str(section["year"]),
+            section["building"],
+            str(section["room_number"]),
+            horario
+        ])
     
-    # Obtener horario
-    time_slot_list = await time_slots.find({"time_slot_id": section["time_slot_id"]}).to_list(10)
-    
-    # Obtener aula
-    classroom = await classrooms.find_one({
-        "building": section["building"],
-        "room_number": section["room_number"]
-    })
-    
-    return {
-        "curso": course["title"] if course else "N/A",
-        "seccion": {
-            "course_id": course_id,
-            "sec_id": sec_id,
-            "semester": semester,
-            "year": year
-        },
-        "aula": {
-            "edificio": section["building"],
-            "numero_sala": section["room_number"],
-            "capacidad": classroom["capacity"] if classroom else "N/A"
-        },
-        "horario": [serialize_doc(ts) for ts in time_slot_list]
-    }
+    return format_response(
+        columns=["ID Curso", "Título", "Sección", "Semestre", "Año", "Edificio", "Sala", "Horario"],
+        rows=rows
+    )
 
 
 # ============================================
 # CONSULTA 4: Secciones en un edificio
 # ============================================
-@router.get("/consulta4/sections-by-building/{building}")
-async def get_sections_by_building(building: str):
-    """
-    Encontrar todas las secciones que se imparten en el edificio X.
-    """
+@router.post("/consulta/4")
+async def consulta_4(params: ConsultaParams):
+    """Encontrar todas las secciones que se imparten en el edificio X."""
+    building = params.building
+    if not building:
+        raise HTTPException(status_code=400, detail="Falta el nombre del edificio")
+    
     sections = get_sections()
     courses = get_courses()
     
@@ -171,168 +194,188 @@ async def get_sections_by_building(building: str):
     if not section_list:
         raise HTTPException(status_code=404, detail=f"No se encontraron secciones en el edificio '{building}'")
     
-    # Agregar nombre del curso a cada sección
-    result = []
+    rows = []
     for s in section_list:
         course = await courses.find_one({"course_id": s["course_id"]})
-        result.append({
-            "course_id": s["course_id"],
-            "course_title": course["title"] if course else "N/A",
-            "sec_id": s["sec_id"],
-            "semester": s["semester"],
-            "year": s["year"],
-            "room_number": s["room_number"],
-            "time_slot_id": s["time_slot_id"]
-        })
+        rows.append([
+            s["course_id"],
+            course["title"] if course else "N/A",
+            s["sec_id"],
+            s["semester"],
+            str(s["year"]),
+            str(s["room_number"]),
+            s["time_slot_id"]
+        ])
     
-    return {
-        "edificio": building,
-        "total_secciones": len(result),
-        "secciones": result
-    }
+    return format_response(
+        columns=["ID Curso", "Título", "Sección", "Semestre", "Año", "Sala", "Horario ID"],
+        rows=rows
+    )
 
 
 # ============================================
 # CONSULTA 5: Estudiante y su asesor
 # ============================================
-@router.get("/consulta5/student-advisor/{student_id}")
-async def get_student_and_advisor(student_id: str):
-    """
-    Encontrar el nombre de un estudiante y el nombre de su asesor.
-    """
+@router.post("/consulta/5")
+async def consulta_5(params: ConsultaParams):
+    """Encontrar el nombre de un estudiante y el nombre de su asesor."""
+    student_name = params.studentName
+    if not student_name:
+        raise HTTPException(status_code=400, detail="Falta el nombre del estudiante")
+    
     students = get_students()
     advisors = get_advisors()
     instructors = get_instructors()
     
-    # Buscar estudiante
-    student = await students.find_one({"ID": student_id})
-    if not student:
-        raise HTTPException(status_code=404, detail=f"El estudiante con ID '{student_id}' no existe")
+    # Buscar estudiante por nombre (case-insensitive)
+    student_list = await students.find({
+        "name": {"$regex": f"^{student_name}$", "$options": "i"}
+    }).to_list(100)
     
-    # Buscar asesor
-    advisor = await advisors.find_one({"s_ID": student_id})
+    if not student_list:
+        raise HTTPException(status_code=404, detail=f"No se encontró estudiante con nombre '{student_name}'")
     
-    advisor_info = None
-    if advisor:
-        instructor = await instructors.find_one({"ID": advisor["i_ID"]})
-        if instructor:
-            advisor_info = {
-                "ID": instructor["ID"],
-                "nombre": instructor["name"],
-                "departamento": instructor["dept_name"]
-            }
+    rows = []
+    for student in student_list:
+        advisor = await advisors.find_one({"s_ID": student["ID"]})
+        
+        advisor_name = "Sin asesor asignado"
+        advisor_dept = "N/A"
+        if advisor:
+            instructor = await instructors.find_one({"ID": advisor["i_ID"]})
+            if instructor:
+                advisor_name = instructor["name"]
+                advisor_dept = instructor["dept_name"]
+        
+        rows.append([
+            student["ID"],
+            student["name"],
+            student["dept_name"],
+            str(student["tot_cred"]),
+            advisor_name,
+            advisor_dept
+        ])
     
-    return {
-        "estudiante": {
-            "ID": student["ID"],
-            "nombre": student["name"],
-            "departamento": student["dept_name"],
-            "creditos_totales": student["tot_cred"]
-        },
-        "asesor": advisor_info if advisor_info else "No tiene asesor asignado"
-    }
+    return format_response(
+        columns=["ID Estudiante", "Nombre Estudiante", "Depto. Estudiante", "Créditos", "Nombre Asesor", "Depto. Asesor"],
+        rows=rows
+    )
 
 
 # ============================================
 # CONSULTA 6: Estudiantes con 'A' en un curso
 # ============================================
-@router.get("/consulta6/students-with-a/{course_id}")
-async def get_students_with_a_in_course(course_id: str):
-    """
-    Encontrar a todos los estudiantes que obtuvieron una 'A' en el curso X.
-    """
+@router.post("/consulta/6")
+async def consulta_6(params: ConsultaParams):
+    """Encontrar a todos los estudiantes que obtuvieron una 'A' en el curso X."""
+    course_name = params.courseName
+    if not course_name:
+        raise HTTPException(status_code=400, detail="Falta el nombre o ID del curso")
+    
     courses = get_courses()
     takes_col = get_takes()
     students = get_students()
     
-    # Verificar si el curso existe
-    course = await courses.find_one({"course_id": course_id})
+    # Buscar curso por ID o título
+    course = await courses.find_one({
+        "$or": [
+            {"course_id": course_name},
+            {"title": {"$regex": f"^{course_name}$", "$options": "i"}}
+        ]
+    })
+    
     if not course:
-        raise HTTPException(status_code=404, detail=f"El curso '{course_id}' no existe")
+        raise HTTPException(status_code=404, detail=f"El curso '{course_name}' no existe")
     
     # Buscar estudiantes con A (incluye A, A-, A+)
     takes_list = await takes_col.find({
-        "course_id": course_id,
+        "course_id": course["course_id"],
         "grade": {"$regex": "^A", "$options": "i"}
     }).to_list(1000)
     
-    # Obtener información de cada estudiante
-    result = []
+    if not takes_list:
+        return format_response(
+            columns=["Mensaje"],
+            rows=[[f"Ningún estudiante obtuvo 'A' en el curso {course['title']}"]]
+        )
+    
+    rows = []
     for t in takes_list:
         student = await students.find_one({"ID": t["ID"]})
         if student:
-            result.append({
-                "ID": student["ID"],
-                "nombre": student["name"],
-                "departamento": student["dept_name"],
-                "calificacion": t["grade"],
-                "semester": t["semester"],
-                "year": t["year"]
-            })
+            rows.append([
+                student["ID"],
+                student["name"],
+                student["dept_name"],
+                t["grade"],
+                t["semester"],
+                str(t["year"])
+            ])
     
-    return {
-        "curso": {
-            "course_id": course["course_id"],
-            "titulo": course["title"]
-        },
-        "total_estudiantes": len(result),
-        "estudiantes": result
-    }
+    return format_response(
+        columns=["ID Estudiante", "Nombre", "Departamento", "Calificación", "Semestre", "Año"],
+        rows=rows
+    )
 
 
 # ============================================
 # CONSULTA 7: Estudiantes asesorados por profesor X
 # ============================================
-@router.get("/consulta7/students-by-advisor/{instructor_name}")
-async def get_students_by_advisor_name(instructor_name: str):
-    """
-    Encontrar los nombres de todos los estudiantes asesorados por el profesor de nombre X.
-    """
+@router.post("/consulta/7")
+async def consulta_7(params: ConsultaParams):
+    """Encontrar los nombres de todos los estudiantes asesorados por el profesor de nombre X."""
+    professor_name = params.professorName
+    if not professor_name:
+        raise HTTPException(status_code=400, detail="Falta el nombre del profesor")
+    
     instructors = get_instructors()
     advisors = get_advisors()
     students = get_students()
     
     # Buscar instructor por nombre (case-insensitive)
     instructor = await instructors.find_one({
-        "name": {"$regex": f"^{instructor_name}$", "$options": "i"}
+        "name": {"$regex": f"^{professor_name}$", "$options": "i"}
     })
     
     if not instructor:
-        raise HTTPException(status_code=404, detail=f"No se encontró un profesor con nombre '{instructor_name}'")
+        raise HTTPException(status_code=404, detail=f"No se encontró un profesor con nombre '{professor_name}'")
     
     # Buscar estudiantes asesorados
     advisor_list = await advisors.find({"i_ID": instructor["ID"]}).to_list(500)
     
-    result = []
+    if not advisor_list:
+        return format_response(
+            columns=["Mensaje"],
+            rows=[[f"El profesor {instructor['name']} no tiene estudiantes asignados"]]
+        )
+    
+    rows = []
     for a in advisor_list:
         student = await students.find_one({"ID": a["s_ID"]})
         if student:
-            result.append({
-                "ID": student["ID"],
-                "nombre": student["name"],
-                "departamento": student["dept_name"],
-                "creditos": student["tot_cred"]
-            })
+            rows.append([
+                student["ID"],
+                student["name"],
+                student["dept_name"],
+                str(student["tot_cred"])
+            ])
     
-    return {
-        "profesor": {
-            "ID": instructor["ID"],
-            "nombre": instructor["name"],
-            "departamento": instructor["dept_name"]
-        },
-        "total_estudiantes": len(result),
-        "estudiantes": result
-    }
+    return format_response(
+        columns=["ID Estudiante", "Nombre", "Departamento", "Créditos"],
+        rows=rows
+    )
 
 
 # ============================================
 # CONSULTA 8: Cursos que imparte un profesor
 # ============================================
-@router.get("/consulta8/courses-by-instructor/{instructor_name}")
-async def get_courses_by_instructor(instructor_name: str):
-    """
-    Encontrar todos los cursos (título, horario y aula) que imparte el profesor de nombre X.
-    """
+@router.post("/consulta/8")
+async def consulta_8(params: ConsultaParams):
+    """Encontrar todos los cursos (título, horario y aula) que imparte el profesor de nombre X."""
+    professor_name = params.professorName
+    if not professor_name:
+        raise HTTPException(status_code=400, detail="Falta el nombre del profesor")
+    
     instructors = get_instructors()
     teaches_col = get_teaches()
     sections = get_sections()
@@ -341,16 +384,22 @@ async def get_courses_by_instructor(instructor_name: str):
     
     # Buscar instructor
     instructor = await instructors.find_one({
-        "name": {"$regex": f"^{instructor_name}$", "$options": "i"}
+        "name": {"$regex": f"^{professor_name}$", "$options": "i"}
     })
     
     if not instructor:
-        raise HTTPException(status_code=404, detail=f"No se encontró un profesor con nombre '{instructor_name}'")
+        raise HTTPException(status_code=404, detail=f"No se encontró un profesor con nombre '{professor_name}'")
     
     # Buscar cursos que enseña
     teaches_list = await teaches_col.find({"ID": instructor["ID"]}).to_list(100)
     
-    result = []
+    if not teaches_list:
+        return format_response(
+            columns=["Mensaje"],
+            rows=[[f"El profesor {instructor['name']} no imparte ningún curso"]]
+        )
+    
+    rows = []
     for t in teaches_list:
         course = await courses.find_one({"course_id": t["course_id"]})
         section = await sections.find_one({
@@ -360,42 +409,39 @@ async def get_courses_by_instructor(instructor_name: str):
             "year": t["year"]
         })
         
-        horario = []
+        horario = "N/A"
+        aula = "N/A"
         if section:
+            aula = f"{section['building']} {section['room_number']}"
             time_slot_list = await time_slots.find({"time_slot_id": section["time_slot_id"]}).to_list(10)
-            horario = [{"dia": ts["day"], "hora_inicio": f"{ts['start_hr']}:{ts['start_min']:02d}", 
-                       "hora_fin": f"{ts['end_hr']}:{ts['end_min']:02d}"} for ts in time_slot_list]
+            if time_slot_list:
+                horario = ", ".join([
+                    f"{ts['day']} {ts['start_hr']}:{ts['start_min']:02d}-{ts['end_hr']}:{ts['end_min']:02d}"
+                    for ts in time_slot_list
+                ])
         
-        result.append({
-            "course_id": t["course_id"],
-            "titulo": course["title"] if course else "N/A",
-            "creditos": course["credits"] if course else 0,
-            "sec_id": t["sec_id"],
-            "semester": t["semester"],
-            "year": t["year"],
-            "aula": f"{section['building']} {section['room_number']}" if section else "N/A",
-            "horario": horario
-        })
+        rows.append([
+            t["course_id"],
+            course["title"] if course else "N/A",
+            t["sec_id"],
+            t["semester"],
+            str(t["year"]),
+            aula,
+            horario
+        ])
     
-    return {
-        "profesor": {
-            "ID": instructor["ID"],
-            "nombre": instructor["name"],
-            "departamento": instructor["dept_name"]
-        },
-        "total_cursos": len(result),
-        "cursos": result
-    }
+    return format_response(
+        columns=["ID Curso", "Título", "Sección", "Semestre", "Año", "Aula", "Horario"],
+        rows=rows
+    )
 
 
 # ============================================
 # CONSULTA 9: Salario promedio por departamento
 # ============================================
-@router.get("/consulta9/avg-salary-by-department")
-async def get_avg_salary_by_department():
-    """
-    Calcular el salario promedio por departamento.
-    """
+@router.post("/consulta/9")
+async def consulta_9(params: ConsultaParams):
+    """Calcular el salario promedio por departamento."""
     instructors = get_instructors()
     
     # Usar agregación de MongoDB
@@ -416,57 +462,59 @@ async def get_avg_salary_by_department():
     
     result = await instructors.aggregate(pipeline).to_list(100)
     
-    # Formatear resultado
-    formatted = []
+    rows = []
     for r in result:
-        formatted.append({
-            "departamento": r["_id"],
-            "salario_promedio": round(r["salario_promedio"], 2),
-            "total_profesores": r["total_profesores"],
-            "salario_minimo": round(r["salario_minimo"], 2),
-            "salario_maximo": round(r["salario_maximo"], 2)
-        })
+        rows.append([
+            r["_id"],
+            f"${r['salario_promedio']:,.2f}",
+            str(r["total_profesores"]),
+            f"${r['salario_minimo']:,.2f}",
+            f"${r['salario_maximo']:,.2f}"
+        ])
     
-    return {
-        "total_departamentos": len(formatted),
-        "departamentos": formatted
-    }
+    return format_response(
+        columns=["Departamento", "Salario Promedio", "Total Profesores", "Salario Mínimo", "Salario Máximo"],
+        rows=rows
+    )
 
 
 # ============================================
 # CONSULTA 10: Estudiantes de depto X con >90 créditos
 # ============================================
-@router.get("/consulta10/students-high-credits/{dept_name}")
-async def get_students_with_high_credits(dept_name: str, min_credits: int = 90):
-    """
-    Encontrar todos los estudiantes del departamento X con más de 90 créditos.
-    """
+@router.post("/consulta/10")
+async def consulta_10(params: ConsultaParams):
+    """Encontrar todos los estudiantes del departamento X con más de 90 créditos."""
+    dept_name = params.departmentName
+    if not dept_name:
+        raise HTTPException(status_code=400, detail="Falta el nombre del departamento")
+    
     students = get_students()
     
     # Buscar estudiantes
     student_list = await students.find({
         "dept_name": {"$regex": f"^{dept_name}$", "$options": "i"},
-        "tot_cred": {"$gt": min_credits}
+        "tot_cred": {"$gt": 90}
     }).to_list(1000)
     
     if not student_list:
         raise HTTPException(
             status_code=404, 
-            detail=f"No se encontraron estudiantes en '{dept_name}' con más de {min_credits} créditos"
+            detail=f"No se encontraron estudiantes en '{dept_name}' con más de 90 créditos"
         )
     
-    result = [{
-        "ID": s["ID"],
-        "nombre": s["name"],
-        "creditos": s["tot_cred"]
-    } for s in student_list]
+    rows = []
+    for s in student_list:
+        rows.append([
+            s["ID"],
+            s["name"],
+            s["dept_name"],
+            str(s["tot_cred"])
+        ])
     
     # Ordenar por créditos descendente
-    result.sort(key=lambda x: x["creditos"], reverse=True)
+    rows.sort(key=lambda x: int(x[3]), reverse=True)
     
-    return {
-        "departamento": dept_name,
-        "creditos_minimos": min_credits,
-        "total_estudiantes": len(result),
-        "estudiantes": result
-    }
+    return format_response(
+        columns=["ID Estudiante", "Nombre", "Departamento", "Créditos"],
+        rows=rows
+    )
