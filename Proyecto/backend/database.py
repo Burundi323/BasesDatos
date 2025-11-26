@@ -18,13 +18,42 @@ async def close_mongo_connection():
     print("❌ Conexión a MongoDB cerrada")
 
 def get_database():
-    """Obtener la base de datos Librebria"""
+    """Obtener la base de datos Universidad"""
     return db.client[settings.DATABASE_NAME]
 
-def get_books_collection():
-    """Obtener colección de libros"""
-    return get_database()["Books"]
+# Colecciones
+def get_collection(name: str):
+    return get_database()[name]
 
-def get_companies_collection():
-    """Obtener colección de compañías"""
-    return get_database()["Companies"]
+def get_students():
+    return get_database()["Student"]
+
+def get_courses():
+    return get_database()["Course"]
+
+def get_instructors():
+    return get_database()["Instructor"]
+
+def get_sections():
+    return get_database()["Section"]
+
+def get_takes():
+    return get_database()["Takes"]
+
+def get_teaches():
+    return get_database()["Teaches"]
+
+def get_advisors():
+    return get_database()["Advisor"]
+
+def get_prereqs():
+    return get_database()["Prereq"]
+
+def get_departments():
+    return get_database()["Department"]
+
+def get_classrooms():
+    return get_database()["Classroom"]
+
+def get_time_slots():
+    return get_database()["Time_slot"]

@@ -1,21 +1,21 @@
-# Backend API para Librebria
+# Backend API para Universidad
 # FastAPI + MongoDB Atlas
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import books, companies
+from routers import queries
 from database import connect_to_mongo, close_mongo_connection
 
 app = FastAPI(
-    title="Librebria API",
-    description="API para consultas de la base de datos Librebria",
+    title="Universidad API",
+    description="API para consultas de la base de datos Universidad - 10 consultas predeterminadas",
     version="1.0.0"
 )
 
 # Configurar CORS para permitir peticiones desde el frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],  # URLs del frontend
+    allow_origins=["*"],  # Permitir todos los orígenes
     allow_credentials=True,
     allow_methods=["GET"],  # Solo lectura
     allow_headers=["*"],
@@ -30,19 +30,26 @@ async def startup_db_client():
 async def shutdown_db_client():
     await close_mongo_connection()
 
-# Incluir routers
-app.include_router(books.router, prefix="/api/books", tags=["Books"])
-app.include_router(companies.router, prefix="/api/companies", tags=["Companies"])
+# Incluir router de consultas
+app.include_router(queries.router, prefix="/api", tags=["Consultas Universidad"])
 
 # Ruta raíz
 @app.get("/")
 async def root():
     return {
-        "message": "Bienvenido a Librebria API",
+        "message": "Bienvenido a Universidad API",
         "docs": "/docs",
-        "endpoints": {
-            "books": "/api/books",
-            "companies": "/api/companies"
+        "consultas": {
+            "1": "/api/consulta1/prereqs/{course_id} - Prerrequisitos de un curso",
+            "2": "/api/consulta2/transcript/{student_id} - Historial académico",
+            "3": "/api/consulta3/section/{course_id}/{sec_id}/{semester}/{year} - Detalles de sección",
+            "4": "/api/consulta4/sections-by-building/{building} - Secciones por edificio",
+            "5": "/api/consulta5/student-advisor/{student_id} - Estudiante y asesor",
+            "6": "/api/consulta6/students-with-a/{course_id} - Estudiantes con A en curso",
+            "7": "/api/consulta7/students-by-advisor/{instructor_name} - Estudiantes por asesor",
+            "8": "/api/consulta8/courses-by-instructor/{instructor_name} - Cursos por profesor",
+            "9": "/api/consulta9/avg-salary-by-department - Salario promedio por depto",
+            "10": "/api/consulta10/students-high-credits/{dept_name} - Estudiantes con >90 créditos"
         }
     }
 
