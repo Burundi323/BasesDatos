@@ -2,7 +2,7 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background-color: #020617; /* slate-950 */
+  background-color: #020617;
   color: #e5e7eb;
 }
 
@@ -19,6 +19,68 @@
 
 .topbar h1 {
   font-size: 1.25rem;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* Selector de base de datos */
+.db-selector {
+  display: flex;
+  gap: 0.5rem;
+  background: #0f172a;
+  padding: 0.3rem;
+  border-radius: 999px;
+  border: 1px solid #1f2937;
+}
+
+.db-btn {
+  padding: 0.4rem 1rem;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  background: transparent;
+  color: #9ca3af;
+  transition: all 0.2s ease;
+}
+
+.db-btn:hover {
+  color: #e5e7eb;
+}
+
+.db-btn.active {
+  background: linear-gradient(135deg, #2563eb, #4f46e5);
+  color: #f9fafb;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+}
+
+/* Indicador de base de datos */
+.db-indicator {
+  font-size: 0.9rem;
+  color: #9ca3af;
+  margin-bottom: 0.5rem;
+}
+
+.db-tag {
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.db-tag.mongo {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #f9fafb;
+}
+
+.db-tag.mysql {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #f9fafb;
 }
 
 /* Botón SALIR */
@@ -53,7 +115,6 @@
 }
 
 /* --- Login --- */
-
 .login-main {
   display: flex;
   align-items: center;
@@ -94,7 +155,6 @@
 }
 
 /* --- Página de consultas --- */
-
 .consulta-page {
   display: flex;
   flex-direction: column;
@@ -111,7 +171,7 @@
 }
 
 .consulta-strip::-webkit-scrollbar {
-  height: 10px; /* más grande */
+  height: 10px;
 }
 
 .consulta-strip::-webkit-scrollbar-track {
@@ -123,7 +183,7 @@
   border-radius: 999px;
 }
 
-/* Burbujas más grandes */
+/* Burbujas */
 .consulta-bubble {
   scroll-snap-align: start;
   flex: 0 0 auto;
@@ -175,7 +235,7 @@
   white-space: nowrap;
 }
 
-/* Panel de consulta (ocupa la pantalla disponible) */
+/* Panel de consulta */
 .consulta-panel {
   margin-top: 0.4rem;
   background: radial-gradient(circle at top left, #020617, #020617);
@@ -294,7 +354,7 @@
 }
 
 .tabla-contenedor::-webkit-scrollbar {
-  width: 10px; /* más grande */
+  width: 10px;
 }
 
 .tabla-contenedor::-webkit-scrollbar-thumb {
@@ -328,7 +388,7 @@
 }
 
 .tabla tbody tr:nth-child(odd) {
-  background-color: #020617;
+  background-color: #0f172a;
 }
 
 /* Paginación */
@@ -411,7 +471,7 @@
   animation: fade-up 0.3s ease-out;
 }
 
-/* Responsivo básico */
+/* Responsivo */
 @media (max-width: 768px) {
   .main {
     padding: 1rem;
@@ -419,6 +479,12 @@
 
   .topbar {
     padding: 0.8rem 1.1rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .topbar-right {
+    flex-wrap: wrap;
   }
 
   .consulta-panel {
@@ -427,5 +493,9 @@
 
   .consulta-strip {
     gap: 0.7rem;
+  }
+
+  .db-selector {
+    flex-wrap: wrap;
   }
 }

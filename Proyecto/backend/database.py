@@ -1,59 +1,73 @@
-# Configuración de conexión a MongoDB Atlas
+# Configuración de conexión a MongoDB Atlas y MySQL
 from motor.motor_asyncio import AsyncIOMotorClient
+import aiomysql
 from config import settings
 
-class Database:
+# ==================== MongoDB ====================
+class MongoDatabase:
     client: AsyncIOMotorClient = None
-    
-db = Database()
+
+mongo_db = MongoDatabase()
 
 async def connect_to_mongo():
     """Conectar a MongoDB Atlas"""
-    db.client = AsyncIOMotorClient(settings.MONGODB_URL)
+    mongo_db.client = AsyncIOMotorClient(settings.MONGODB_URL)
     print("✅ Conectado a MongoDB Atlas")
 
 async def close_mongo_connection():
     """Cerrar conexión a MongoDB"""
-    db.client.close()
+    if mongo_db.client:
+        mongo_db.client.close()
     print("❌ Conexión a MongoDB cerrada")
 
-def get_database():
-    """Obtener la base de datos Universidad"""
-    return db.client[settings.DATABASE_NAME]
+def get_mongo_database():
+    return mongo_db.client[settings.MONGODB_DATABASE]
 
-# Colecciones
-def get_collection(name: str):
-    return get_database()[name]
+def get_mongo_collection(name: str):
+    return get_mongo_database()[name]
 
-def get_students():
-    return get_database()["Student"]
+# ==================== MySQL ====================
+class MySQLDatabase:
+    pool = None
 
-def get_courses():
-    return get_database()["Course"]
+mysql_db = MySQLDatabase()
 
-def get_instructors():
-    return get_database()["Instructor"]
+async def connect_to_mysql():
+    """Conectar a MySQL"""
+    try:
+        mysql_db.pool = await aiomysql.create_pool(
+            host=settings.MYSQL_HOST,
+            port=settings.MYSQL_PORT,
+            user=settings.MYSQL_USER,
+            password=settings.MYSQL_PASSWORD,
+            db=settings.MYSQL_DATABASE,
+            autocommit=True,
+            minsize=1,
+            maxsize=10
+        )
+        print("✅ Conectado a MySQL")
+    except Exception as e:
+        print(f"⚠️ No se pudo conectar a MySQL: {e}")
 
-def get_sections():
-    return get_database()["Section"]
+async def close_mysql_connection():
+    """Cerrar conexión a MySQL"""
+    if mysql_db.pool:
+        mysql_db.pool.close()
+        await mysql_db.pool.wait_closed()
+    print("❌ Conexión a MySQL cerrada")
 
-def get_takes():
-    return get_database()["Takes"]
+async def execute_query(query: str, params: tuple = None):
+    """Ejecutar una consulta MySQL y retornar resultados"""
+    async with mysql_db.pool.acquire() as conn:
+        async with conn.cursor(aiomysql.DictCursor) as cursor:
+            await cursor.execute(query, params)
+            result = await cursor.fetchall()
+            return result
 
-def get_teaches():
-    return get_database()["Teaches"]
-
-def get_advisors():
-    return get_database()["Advisor"]
-
-def get_prereqs():
-    return get_database()["Prereq"]
-
-def get_departments():
-    return get_database()["Department"]
-
-def get_classrooms():
-    return get_database()["Classroom"]
-
-def get_time_slots():
-    return get_database()["Time_slot"]
+async def execute_query_one(query: str, params: tuple = None):
+    """Ejecutar una consulta MySQL y retornar un solo resultado"""
+    async with mysql_db.pool.acquire() as conn:
+        async with conn.cursor(aiomysql.DictCursor) as cursor:
+            await cursor.execute(query, params)
+            result = await cursor.fetchone()
+            return result

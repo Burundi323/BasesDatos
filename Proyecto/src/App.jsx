@@ -11,7 +11,7 @@ const CONSULTAS = [
       {
         name: "courseId",
         label: "ID del curso",
-        placeholder: "Ejemplo: CS-101",
+        placeholder: "Ejemplo: 376",
       },
     ],
   },
@@ -24,7 +24,7 @@ const CONSULTAS = [
       {
         name: "studentId",
         label: "ID del estudiante",
-        placeholder: "Ejemplo: 12345",
+        placeholder: "Ejemplo: 24746",
       },
     ],
   },
@@ -50,7 +50,7 @@ const CONSULTAS = [
       {
         name: "building",
         label: "Nombre del edificio",
-        placeholder: "Ejemplo: Watson",
+        placeholder: "Ejemplo: Gates",
       },
     ],
   },
@@ -63,7 +63,7 @@ const CONSULTAS = [
       {
         name: "studentName",
         label: "Nombre del estudiante",
-        placeholder: "Ejemplo: Zhang",
+        placeholder: "Ejemplo: Schrefl",
       },
     ],
   },
@@ -76,7 +76,7 @@ const CONSULTAS = [
       {
         name: "courseName",
         label: "Nombre o ID del curso",
-        placeholder: "Ejemplo: Database Systems",
+        placeholder: "Ejemplo: 401",
       },
     ],
   },
@@ -89,7 +89,7 @@ const CONSULTAS = [
       {
         name: "professorName",
         label: "Nombre del profesor",
-        placeholder: "Ejemplo: Smith",
+        placeholder: "Ejemplo: McKinnon",
       },
     ],
   },
@@ -102,7 +102,7 @@ const CONSULTAS = [
       {
         name: "professorName",
         label: "Nombre del profesor",
-        placeholder: "Ejemplo: Brown",
+        placeholder: "Ejemplo: McKinnon",
       },
     ],
   },
@@ -121,7 +121,7 @@ const CONSULTAS = [
       {
         name: "departmentName",
         label: "Nombre del departamento",
-        placeholder: "Ejemplo: Comp. Sci.",
+        placeholder: "Ejemplo: History",
       },
     ],
   },
@@ -135,10 +135,13 @@ function App() {
     password: "",
   });
 
+  // Base de datos seleccionada
+  const [selectedDB, setSelectedDB] = useState("mongo"); // "mongo" o "mysql"
+
   // Consultas
   const [selectedId, setSelectedId] = useState(null);
   const [formValues, setFormValues] = useState({});
-  const [result, setResult] = useState(null); // { columns: [], rows: [][] }
+  const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [page, setPage] = useState(1);
@@ -148,21 +151,18 @@ function App() {
   const selectedConsulta = CONSULTAS.find((c) => c.id === selectedId);
 
   // --- Login ---
-
   const handleLoginChange = (field, value) => {
     setLoginValues((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleLoginSubmit = (e) => {
     e.preventDefault();
-    // Login no funcional: cualquier credencial deja entrar.
     setLoggedIn(true);
     setSelectedId(null);
     setExited(false);
   };
 
-  // --- Botón SALIR (terminar app) ---
-
+  // --- Botón SALIR ---
   const handleExit = () => {
     setExited(true);
     setSelectedId(null);
@@ -172,8 +172,7 @@ function App() {
     setPage(1);
   };
 
-  // --- Menú de consultas (burbujas) ---
-
+  // --- Menú de consultas ---
   const handleBubbleClick = (id) => {
     setExited(false);
     setSelectedId(id);
@@ -183,8 +182,14 @@ function App() {
     setPage(1);
   };
 
-  // --- Formulario de consulta ---
+  // --- Cambiar base de datos ---
+  const handleDBChange = (db) => {
+    setSelectedDB(db);
+    setResult(null);
+    setError("");
+  };
 
+  // --- Formulario de consulta ---
   const handleInputChange = (name, value) => {
     setFormValues((prev) => ({
       ...prev,
@@ -211,7 +216,7 @@ function App() {
     setPage(1);
 
     try {
-      const data = await ejecutarConsulta(selectedConsulta.id, formValues);
+      const data = await ejecutarConsulta(selectedConsulta.id, formValues, selectedDB);
       setResult(data);
     } catch (err) {
       console.error(err);
@@ -222,23 +227,16 @@ function App() {
   };
 
   // --- Paginación ---
-
   const rows = result?.rows ?? [];
   const columns = result?.columns ?? [];
   const totalPages = rows.length > 0 ? Math.ceil(rows.length / pageSize) : 1;
   const startIndex = (page - 1) * pageSize;
   const visibleRows = rows.slice(startIndex, startIndex + pageSize);
 
-  const handlePrevPage = () => {
-    setPage((p) => Math.max(1, p - 1));
-  };
-
-  const handleNextPage = () => {
-    setPage((p) => Math.min(totalPages, p + 1));
-  };
+  const handlePrevPage = () => setPage((p) => Math.max(1, p - 1));
+  const handleNextPage = () => setPage((p) => Math.min(totalPages, p + 1));
 
   // --- Render ---
-
   if (!loggedIn) {
     return (
       <div className="app">
@@ -259,9 +257,7 @@ function App() {
                   id="username"
                   type="text"
                   value={loginValues.username}
-                  onChange={(e) =>
-                    handleLoginChange("username", e.target.value)
-                  }
+                  onChange={(e) => handleLoginChange("username", e.target.value)}
                   placeholder="usuario"
                 />
               </div>
@@ -271,9 +267,7 @@ function App() {
                   id="password"
                   type="password"
                   value={loginValues.password}
-                  onChange={(e) =>
-                    handleLoginChange("password", e.target.value)
-                  }
+                  onChange={(e) => handleLoginChange("password", e.target.value)}
                   placeholder="••••••••"
                 />
               </div>
@@ -295,9 +289,26 @@ function App() {
     <div className="app">
       <header className="topbar">
         <h1>Consultas a la base de datos</h1>
-        <button className="btn-exit-top" onClick={handleExit}>
-          SALIR
-        </button>
+        <div className="topbar-right">
+          {/* Selector de base de datos */}
+          <div className="db-selector">
+            <button
+              className={`db-btn ${selectedDB === "mongo" ? "active" : ""}`}
+              onClick={() => handleDBChange("mongo")}
+            >
+              🍃 MongoDB
+            </button>
+            <button
+              className={`db-btn ${selectedDB === "mysql" ? "active" : ""}`}
+              onClick={() => handleDBChange("mysql")}
+            >
+              🐬 MySQL
+            </button>
+          </div>
+          <button className="btn-exit-top" onClick={handleExit}>
+            SALIR
+          </button>
+        </div>
       </header>
 
       <main className="main">
@@ -311,6 +322,14 @@ function App() {
           </div>
         ) : (
           <div className="consulta-page">
+            {/* Indicador de base de datos actual */}
+            <div className="db-indicator">
+              Base de datos actual:{" "}
+              <span className={`db-tag ${selectedDB}`}>
+                {selectedDB === "mongo" ? "🍃 MongoDB Atlas" : "🐬 MySQL Local"}
+              </span>
+            </div>
+
             {/* Burbujas horizontales con scroll */}
             <div className="consulta-strip">
               {CONSULTAS.map((consulta) => (
@@ -439,15 +458,14 @@ function App() {
 }
 
 /**
- * Aquí se llama a la API en Python.
- * El backend debe responder con:
- * { "columns": [...], "rows": [ [...], [...], ... ] }
+ * Llama a la API seleccionada (MongoDB o MySQL)
  */
-async function ejecutarConsulta(id, params) {
-  // Cambiar esto a donde corremos la API
+async function ejecutarConsulta(id, params, database) {
   const BASE_URL = "http://localhost:8000";
-
-  const url = `${BASE_URL}/api/consulta/${id}`;
+  
+  // Cambiar el endpoint según la base de datos seleccionada
+  const dbPath = database === "mongo" ? "mongo" : "mysql";
+  const url = `${BASE_URL}/api/${dbPath}/consulta/${id}`;
 
   const response = await fetch(url, {
     method: "POST",
