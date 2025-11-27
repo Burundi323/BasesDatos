@@ -296,13 +296,13 @@ function App() {
               className={`db-btn ${selectedDB === "mongo" ? "active" : ""}`}
               onClick={() => handleDBChange("mongo")}
             >
-              🍃 MongoDB
+               MongoDB
             </button>
             <button
               className={`db-btn ${selectedDB === "mysql" ? "active" : ""}`}
               onClick={() => handleDBChange("mysql")}
             >
-              🐬 MySQL
+               MySQL
             </button>
           </div>
           <button className="btn-exit-top" onClick={handleExit}>

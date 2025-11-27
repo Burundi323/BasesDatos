@@ -1,30 +1,63 @@
-# Configuración de conexión a MongoDB Atlas y MySQL
-from motor.motor_asyncio import AsyncIOMotorClient
+# Configuración de conexión a MongoDB y MySQL
+from pymongo import MongoClient
 import aiomysql
 from config import settings
 
 # ==================== MongoDB ====================
-class MongoDatabase:
-    client: AsyncIOMotorClient = None
+# Conexión síncrona con pymongo
+client = None
+university = None
 
-mongo_db = MongoDatabase()
-
-async def connect_to_mongo():
+def connect_to_mongo():
     """Conectar a MongoDB Atlas"""
-    mongo_db.client = AsyncIOMotorClient(settings.MONGODB_URL)
+    global client, university
+    client = MongoClient(settings.MONGODB_URL)
+    university = client[settings.MONGODB_DATABASE]
     print("✅ Conectado a MongoDB Atlas")
+    print(f"   Colecciones: {university.list_collection_names()}")
 
-async def close_mongo_connection():
+def close_mongo_connection():
     """Cerrar conexión a MongoDB"""
-    if mongo_db.client:
-        mongo_db.client.close()
+    global client
+    if client:
+        client.close()
     print("❌ Conexión a MongoDB cerrada")
 
-def get_mongo_database():
-    return mongo_db.client[settings.MONGODB_DATABASE]
-
+# Colecciones MongoDB
 def get_mongo_collection(name: str):
-    return get_mongo_database()[name]
+    return university[name]
+
+# Acceso directo a colecciones
+def get_students():
+    return university["Student"]
+
+def get_courses():
+    return university["Course"]
+
+def get_instructors():
+    return university["Instructor"]
+
+def get_sections():
+    return university["Section"]
+
+def get_takes():
+    return university["Takes"]
+
+def get_teaches():
+    return university["Teaches"]
+
+def get_advisors():
+    return university["Advisor"]
+
+def get_prereqs():
+    return university["Prereq"]
+
+def get_departments():
+    return university["Department"]
+
+def get_time_slots():
+    return university["Time_slot"]
+
 
 # ==================== MySQL ====================
 class MySQLDatabase:

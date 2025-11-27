@@ -1,5 +1,5 @@
 # Backend API para Universidad
-# FastAPI + MongoDB Atlas + MySQL
+# FastAPI + MongoDB (pymongo) + MySQL
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -24,12 +24,14 @@ app.add_middleware(
 # Eventos de inicio y cierre
 @app.on_event("startup")
 async def startup_db_client():
-    await connect_to_mongo()
+    # MongoDB (síncrono)
+    connect_to_mongo()
+    # MySQL (asíncrono)
     await connect_to_mysql()
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
-    await close_mongo_connection()
+    close_mongo_connection()
     await close_mysql_connection()
 
 # Incluir routers
@@ -51,12 +53,3 @@ async def root():
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
-
-# Endpoint para verificar estado de las bases de datos
-@app.get("/api/status")
-async def db_status():
-    from database import mongo_db, mysql_db
-    return {
-        "mongodb": "connected" if mongo_db.client else "disconnected",
-        "mysql": "connected" if mysql_db.pool else "disconnected"
-    }
